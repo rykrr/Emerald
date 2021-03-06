@@ -32,7 +32,7 @@ Window::Window(int width, int height, int scale) {
 	
 	dimensions = { 0, 0, width, height };
 	
-	load_chr_rom("./characters.rom");
+	//load_chr_rom("./characters.rom");
 }
 
 

@@ -50,9 +50,11 @@ void Graphics::operator+=(u8 cycles) {
 	
 	clock += cycles;
 
-	if (dma.active) {
-		memory.copy(OAM_TABLE + dma.counter, dma.source + dma.counter);
-		dma.active = ++dma.counter % 0xA0;
+	repeat (cycles) {
+		if (dma.active) {
+			memory.copy(OAM_TABLE + dma.counter, dma.source + dma.counter);
+			dma.active = ++dma.counter % 0xA0;
+		}
 	}
 	
 	switch (STAT & 3) {
@@ -108,8 +110,6 @@ void Graphics::operator+=(u8 cycles) {
 		
 		// HBLANK
 		case 0:
-			
-			// TODO: check for DMA
 			
 			BREAK_IF_CLK_LT(HBLANK_CYCLES);
 			

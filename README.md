@@ -13,9 +13,12 @@ Emerald requires a separate ```./emerald -b <path_to_boot.rom> -c <path_to_game.
 ## Debug Console
 To enable the debug console, run make with ```FLAGS="DEBUG CLOCK_LIMITER_DISABLE"```.
 
-Emerald can be run using ```./emerald -c <path to rom>``` (you won't be able to do much though)
+Emerald can be run using ```./emerald -c <path to rom>``` (you won't be able to do much though).
+
 It is recommended to run Emerald with the default DMG bootloader.
+
 To specify a bootloader other than ```boot.rom```, use the ```-b <path to boot rom>``` flag.
+
 To run a game without the bootloader, use the same path for ```-b``` and ```-c```
 (this will only work if RST00 is set to restart the game).
 

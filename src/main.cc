@@ -1,17 +1,20 @@
 #include <csignal>
 #include <unistd.h>
 
-#include "graphics/graphics.hh"
-
 #include "interrupt.hh"
 #include "memory.hh"
-#include "cartridge.hh"
 #include "clock.hh"
+
+#include "cartridge/cartridge.hh"
 
 #include "core/registers.hh"
 #include "core/timer.hh"
 #include "core/cpu.hh"
 #include "core/mappings.hh"
+
+#include "graphics/graphics.hh"
+#include "joypad.hh"
+
 
 RegisterFile registers;
 
@@ -38,6 +41,7 @@ Memory memory;
 Cartridge cartridge;
 	
 Graphics graphics;
+Joypad joypad(graphics.get_window());
 
 Timer timer;
 Clock clk;
@@ -81,6 +85,7 @@ void init() {
 	
 	clk.add(timer);
 	clk.add(graphics);
+	clk.add(joypad);
 
 #ifdef DEBUG
 	clk.add(debugger);
@@ -98,11 +103,12 @@ int main(int argc, char **argv) {
 	using namespace std;
 
 	int opt;
-	bool override_cartridge_logo= false;
+	bool override_cartridge_logo = false;
+	bool no_boot_rom = false;
 	string boot_rom = "boot.gb";
 	string cart_rom = "cart.gb";
 
-	while ((opt = getopt(argc, argv, "b:c:l")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:C:l")) != -1) {
 		switch(opt) {
 			case 'b':
 				boot_rom = string(optarg);
@@ -110,6 +116,11 @@ int main(int argc, char **argv) {
 
 			case 'c':
 				cart_rom = string(optarg);
+				break;
+
+			case 'C':
+				cart_rom = string(optarg);
+				no_boot_rom = true;
 				break;
 
 			case 'l':
@@ -127,8 +138,16 @@ int main(int argc, char **argv) {
 	cout << "Boot: " << boot_rom << endl;
 	cout << "Cart: " << cart_rom << endl;
 #endif
-	cartridge.load_boot_rom(boot_rom);
-	cartridge.load_rom(cart_rom);
+
+	if (!no_boot_rom) {
+		cartridge.load_boot_rom(boot_rom);
+	}
+	else {
+		PC = 0x100;
+	}
+
+	// boot rom space will be overriden if no_boot_rom is set
+	cartridge.load_rom(cart_rom, no_boot_rom);
 
 #ifdef VDEBUG
 	cout << "\n-- Logo ROM --" << endl;
@@ -147,6 +166,9 @@ int main(int argc, char **argv) {
 	catch (std::exception &e) {
 #ifdef DEBUG
 		debugger.fatal();
+#else
+		cerr << "Exception: " << endl;
+		cerr << e.what() << endl;
 #endif
 	}
 }

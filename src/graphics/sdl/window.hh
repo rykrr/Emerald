@@ -53,6 +53,8 @@ public:
 	
 	void display();
 	void clear();
+
+	bool get_key_event(SDL_Event &e);
 	
 	Texture create_texture(int x, int y, int width, int height, int scale=1);
 	StreamTexture create_stream_texture(int x, int y, int width, int height, int scale=1);

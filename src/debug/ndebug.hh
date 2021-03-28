@@ -62,6 +62,7 @@ class Debugger : public ClockSubscriber {
 	WINDOW *cpu_win;
 	WINDOW *ppu_win;
 	WINDOW *int_win;
+	WINDOW *ext_win;
 
 	WINDOW *console_win;
 	WINDOW *trace_win;
@@ -115,7 +116,7 @@ private:
 
 		trace.push_back(opstr);
 
-		if (trace.size() > (height - 2))
+		if (trace.size() > (height - 6))
 			trace.pop_front();
 
 		for (int i = 0; i < trace.size(); i++) {
@@ -154,6 +155,10 @@ private:
 		print_byte(ppu_win, 2, 25, memory[0xFF44].read_byte());
 
 		wrefresh(ppu_win);
+
+		print_byte(ext_win, 1, 7, memory[0xFF00].read_byte());
+
+		wrefresh(ext_win);
 	}
 
 	void draw_static() {
@@ -184,6 +189,11 @@ private:
 		mvwprintw(ppu_win, 2, 21, "LY");
 		wrefresh(ppu_win);
 
+		box(ext_win, 0, 0);
+		mvwprintw(ext_win, 0, 1, "EXT");
+		mvwprintw(ext_win, 1, 2, "JOYP");
+		wrefresh(ext_win);
+
 		box(trace_win, 0, 0);
 		mvwprintw(trace_win, 0, 1, "Trace");
 
@@ -206,12 +216,13 @@ private:
 
 		midpoint = (width - midpoint) >> 1;
 
-		cpu_win = newwin(4, 31, 0, midpoint + 24);
-		ppu_win = newwin(4, 29, 0, midpoint + 70);
-		int_win = newwin(4, 15, 0, midpoint + 55);
+		cpu_win = newwin(4, 31, 0, midpoint);
+		ppu_win = newwin(4, 29, 0, midpoint + 46);
+		int_win = newwin(4, 15, 0, midpoint + 31);
+		ext_win = newwin(4, 15, 0, midpoint + 75);
 
 		console_win = newwin(height - 4, 99 - 24, 4, midpoint + 24);
-		trace_win = newwin(height, 24, 0, midpoint);
+		trace_win = newwin(height - 4, 24, 4, midpoint);
 
 		mode_win = newwin(5, 21, (height - 5) >> 1, (width - 21) >> 1);
 		box(mode_win, 0, 0);
@@ -227,6 +238,7 @@ private:
 		del(cpu_win);
 		del(ppu_win);
 		del(int_win);
+		del(ext_win);
 		del(console_win);
 		del(trace_win);
 		del(mode_win);

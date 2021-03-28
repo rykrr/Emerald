@@ -6,10 +6,14 @@
 #include <exception>
 #include <fstream>
 
-#include "memory.hh"
-#include "macros.hh"
+#include "../memory.hh"
+#include "../macros.hh"
 
-#include "core/registers.hh"
+#include "../core/registers.hh"
+
+
+#define CARTRIDGE_TYPE_ADDR 0x0174
+
 
 struct rom_s {
 	std::unique_ptr<char[]> data;

@@ -25,7 +25,7 @@ class Graphics : public ClockSubscriber {
 	
 	u16 clock;
 	struct { u8 x, y; } cursor;
-	
+
 	struct {
 		u8 active;
 		u8 counter;
@@ -68,6 +68,8 @@ public:
 	
 	void set_mode(VMode);
 	void operator+=(u8);
+
+	Window &get_window() { return win; };
 
 	void crash_info() {
 #ifdef VDEBUG

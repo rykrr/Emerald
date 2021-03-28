@@ -20,3 +20,5 @@
 	if (!(assertion)) throw std::runtime_error("Assertion failed: " #assertion);
 
 #define bind(variable, haddr) variable(memory[0xFF##haddr].byte())
+
+#define unused(x) (void)(x)

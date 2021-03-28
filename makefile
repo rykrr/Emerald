@@ -1,5 +1,4 @@
 CC = g++
-CXXFLAGS = -g 
 CXXFLAGS += -include ext/types.hh -include ext/macros.hh
 CXXFLAGS += -lncurses -lpthread -lSDL2
 CXXFLAGS += $(addprefix -D, $(FLAGS))
@@ -16,6 +15,9 @@ vpath %.o obj
 
 emerald: $(OBJDIRS) $(OBJECTS)
 	$(CC) $(CXXFLAGS) $(OBJECTS) -o $@
+
+debug: CXXFLAGS += -g -DDEBUG  -DCLOCK_LIMITER_DISABLE
+debug: emerald
 	
 $(OBJDIRS):
 	mkdir -p $@
@@ -23,7 +25,7 @@ $(OBJDIRS):
 obj/%.o: %.cc
 	$(CC) $(CXXFLAGS) -c -o $@ $<
 
-PHONY: clean
+PHONY: clean debug
 clean:
 	rm -rf obj
 	rm -f gmon.out

@@ -196,6 +196,19 @@ void Window::display() {
 }
 
 
+bool Window::get_key_event(SDL_Event &event) {
+
+	while (SDL_WaitEventTimeout(&event, 0)) {
+		if (event.type != SDL_KEYUP && event.type != SDL_KEYDOWN)
+			continue;
+		printf("Keypress\n");
+		return true;
+	}
+
+	return false;
+}
+
+
 Texture Window::create_texture(int x, int y, int width, int height, int scale) {
 	
 	SDL_Texture *texture = 

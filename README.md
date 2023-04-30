@@ -1,41 +1,40 @@
-# Emerald Gameboy Emulator
+# emerald\_rs
+## Now in Rust!
 
-![Tetris Title Screen](docs/tetris.png)
-
-## Description
-Yet another attempt at a Gameboy emulator (this time in C++).
-
-## Running Emerald
-Run ```make``` to compile the program.
-
-Emerald requires a separate ```./emerald -b <path_to_boot.rom> -c <path_to_game.rom>```
-It is recommended to run Emerald with the default DMG bootloader.
-
-### Run options
-| Options            | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| -c rom_file        | The game rom to run                               |
-| -C rom_file        | The game rom to run without a boot loader         |
-| -b rom_file        | The boot rom to run before the game               |
-
-## Debug Console
-To enable the debug console, build with the ```debug``` target.
-To specify a bootloader other than ```boot.rom```, use the ```-b <path to boot rom>``` flag.
-
-## Checklist
-- Implement memory bank controllers for other cartridges
-- Implement button inputs
-- Implement sound
-- Separate graphics into dynamic module
-- Rewrite in Rust? Maybe not.
-	- This implementation is built around bad reference practices...
-	- Look no further than memory.hh
-- Simplify clock interface
-- Add useful error messages (as opposed to none)
-
-## Known Issues
-- Barely runs Tetris (gets stuck on demo screen)
-- Large number of failed Blaarg tests
-- Will not run Kirby's Dreamland
-
-![It's stuck on this demo screen](docs/tetris2.png)
+Emerald is a GameBoy Emulator written in Rust.  
+  
+It features:  
+- An explicit bus!
+- A mostly functional CPU!
+- A somewhat functional PPU! (Sprites not included)
+- A disturbing lack of sound!
+- Console serial output!
+- ROM only cartridges!
+- A TODO comment where Joypad support should be!
+  
+  
+> Insanity is doing thing same thing, over and over again, but expecting different results.
+- Rita Mae Brown  
+  
+  
+This is attempt #5 at a working emulator.  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+Send help.

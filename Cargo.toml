@@ -1,0 +1,18 @@
+[package]
+name = "emerald"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+opt-level = 3
+
+[dependencies]
+spin_sleep = '1.1.1'
+sdl2 = '0.35.2'
+minifb = '0.24.0'
+env_logger = '0.10.0'
+log = '0.4.17'
+
+
+[features]
+unsafe_textures = []

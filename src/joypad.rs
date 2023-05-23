@@ -18,13 +18,40 @@ pub const DPAD_UP: u8 = 1 << 2;
 pub const DPAD_LEFT: u8 = 1 << 1;
 pub const DPAD_RIGHT: u8 = 1 << 0;
 
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum Button {
+    Start = BUTTON_START,
+    Select = BUTTON_SELECT,
+    A = BUTTON_A,
+    B = BUTTON_B
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum Direction {
+    Down = DPAD_DOWN,
+    Up = DPAD_UP,
+    Left = DPAD_LEFT,
+    Right = DPAD_RIGHT
+}
+
+#[derive(Copy, Clone)]
+pub enum JoypadButtons {
+    Button(Button),
+    Direction(Direction)
+}
+
+pub trait JoypadDriver {
+    fn get_buttons(&mut self) -> Vec<JoypadButtons>;
+}
 
 pub struct Joypad {
     joypad_register: Byte,
 
     // High nibble is buttons, low nibble is direction.
     // Unlike JOYP, 1 = pressed, 0 = not pressed.
-    pressed: Byte,
+    buttons: Byte,
 }
 
 impl BusListener for Joypad {
@@ -39,11 +66,11 @@ impl BusListener for Joypad {
 
                 // Note: JOYP is inverted; 0 means selected.
                 if self.joypad_register & SELECT_BUTTONS == 0 {
-                    output |= self.pressed >> BUTTONS_SHIFT;
+                    output |= self.buttons >> BUTTONS_SHIFT;
                 }
 
                 if self.joypad_register & SELECT_DPAD == 0 {
-                    output |= self.pressed >> BUTTON_SELECT;
+                    output |= self.buttons >> DPAD_SHIFT;
                 }
 
                 //(self.joypad_register & 0xF0) | (!output & 0x0F)
@@ -65,7 +92,19 @@ impl Joypad {
     pub fn new() -> Self {
         Self {
             joypad_register: 0xFF,
-            pressed: 0
+            buttons: 0
         }
+    }
+
+    pub fn update(&mut self, driver: &mut dyn JoypadDriver) {
+        let mut buttons: u8 = 0;
+        let mut directions: u8 = 0;
+        driver.get_buttons().iter().for_each(|input | {
+            match input {
+                JoypadButtons::Button(button) => buttons |= *button as u8,
+                JoypadButtons::Direction(direction) => directions |= *direction as u8,
+            }
+        });
+        self.buttons = (buttons << BUTTONS_SHIFT) | (directions << DPAD_SHIFT);
     }
 }

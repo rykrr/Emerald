@@ -1,7 +1,9 @@
 extern crate minifb;
 
 use crate::graphics::graphics_driver::*;
-use minifb::{Scale, Window, WindowOptions};
+use minifb::{Key, Scale, Window, WindowOptions};
+use crate::{JoypadButtons, JoypadDriver};
+use crate::joypad::{Button, Direction};
 
 pub struct MiniFbDriver {
     window: Window,
@@ -45,5 +47,23 @@ impl GraphicsDriver for MiniFbDriver {
 
     fn is_closed(&self) -> bool {
         !self.window.is_open()
+    }
+}
+
+impl JoypadDriver for MiniFbDriver {
+    fn get_buttons(&mut self) -> Vec<JoypadButtons> {
+        self.window.get_keys().iter().filter_map(|&key|
+            match key {
+               Key::W => Some(JoypadButtons::Direction(Direction::Up)),
+                Key::A => Some(JoypadButtons::Direction(Direction::Left)),
+                Key::S => Some(JoypadButtons::Direction(Direction::Down)),
+                Key::D => Some(JoypadButtons::Direction(Direction::Right)),
+                Key::Q => Some(JoypadButtons::Button(Button::A)),
+                Key::E => Some(JoypadButtons::Button(Button::B)),
+                Key::Key1 => Some(JoypadButtons::Button(Button::Start)),
+                Key::Key2 => Some(JoypadButtons::Button(Button::Select)),
+                _ => None
+            }
+        ).collect::<Vec<JoypadButtons>>()
     }
 }

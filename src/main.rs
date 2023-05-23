@@ -16,7 +16,6 @@ mod ppu;
 use crate::ppu::*;
 
 mod graphics;
-mod boot_rom;
 
 mod cartridge;
 
@@ -83,7 +82,7 @@ fn main() {
 
     let options = parse_args();
 
-    let mut graphics_driver = MiniFbDriver::new(
+    let mut minifb_driver = MiniFbDriver::new(
         DISPLAY_WIDTH as u16,
         DISPLAY_HEIGHT as u16,
         minifb::Scale::X4,
@@ -134,7 +133,7 @@ fn main() {
         cpu.print_trace(&bus);
     }
 
-    while !cpu.is_halted() && !graphics_driver.is_closed() {
+    while !cpu.is_halted() && !minifb_driver.is_closed() {
         if options.enable_debugger {
             let ppu = &*ppu.as_ref().borrow();
             debugger.step(&mut bus, &mut cpu, ppu);
@@ -150,7 +149,11 @@ fn main() {
 
         ppu.as_ref()
            .borrow_mut()
-           .update(&mut graphics_driver);
+           .update(&mut minifb_driver);
+
+        joypad.as_ref()
+              .borrow_mut()
+              .update(&mut minifb_driver)
     }
     // END LOOP //
 }

@@ -136,9 +136,9 @@ impl BackgroundFifo {
         self.fifo.pop()
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, column: u8) {
         self.fifo.clear();
         self.state = FetchTileNo;
-        self.column = 0;
+        self.column = column;
     }
 }

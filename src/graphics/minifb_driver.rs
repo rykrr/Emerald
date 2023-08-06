@@ -52,9 +52,9 @@ impl GraphicsDriver for MiniFbDriver {
 
 impl JoypadDriver for MiniFbDriver {
     fn get_buttons(&mut self) -> Vec<JoypadButtons> {
-        self.window.get_keys().iter().filter_map(|&key|
+        self.window.get_keys().iter().filter_map(|&key| {
             match key {
-               Key::W => Some(JoypadButtons::Direction(Direction::Up)),
+                Key::W => Some(JoypadButtons::Direction(Direction::Up)),
                 Key::A => Some(JoypadButtons::Direction(Direction::Left)),
                 Key::S => Some(JoypadButtons::Direction(Direction::Down)),
                 Key::D => Some(JoypadButtons::Direction(Direction::Right)),
@@ -64,6 +64,7 @@ impl JoypadDriver for MiniFbDriver {
                 Key::Key2 => Some(JoypadButtons::Button(Button::Select)),
                 _ => None
             }
+        }
         ).collect::<Vec<JoypadButtons>>()
     }
 }

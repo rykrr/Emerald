@@ -68,7 +68,7 @@ impl Clock {
         println!("Remainder: {}", remainder.as_nanos());
 
         if remainder.is_zero() {
-            //panic!("Cycle overdue!");
+            panic!("Cycle overdue by {:?}!", remainder);
         }
     }
 }

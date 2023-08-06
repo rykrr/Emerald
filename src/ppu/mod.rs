@@ -12,7 +12,6 @@ use std::rc::Rc;
 
 use crate::graphics_driver::GraphicsDriver;
 use crate::ppu::background_fifo::BackgroundFifo;
-use crate::ppu::Mode::OAM;
 use crate::ppu::sprite_fifo::SpriteFifo;
 
 pub const DISPLAY_WIDTH: u8 = 160;
@@ -74,8 +73,8 @@ pub struct Registers {
     SCY: Byte,
     SCX: Byte,
 
+    // LX // Fake register specifying X position of renderer
     LX: Byte,
-    // Fake register specifying X position of renderer
     LY: Byte,
     LYC: Byte,
 
@@ -154,24 +153,25 @@ impl PPU {
     }
 
     pub fn update<'a>(&mut self, driver: &mut (dyn GraphicsDriver + 'a)) {
+        if !self.render_flag {
+            return;
+        }
+
         let start = crate::graphics_driver::Point { x: 0, y: 0 };
         let end = crate::graphics_driver::Point {
             x: DISPLAY_WIDTH as u16,
             y: DISPLAY_HEIGHT as u16,
         };
 
-
-        if self.render_flag {
-            if !self.on {
-                let screen: [u32; PITCH] = [0; PITCH];
-                driver.render(&screen);
-            }
-            else {
-                driver.render(&self.pixel_buffer);
-            }
-
-            self.render_flag = false;
+        if !self.on {
+            let screen: [u32; PITCH] = [0; PITCH];
+            driver.render(&screen);
         }
+        else {
+            driver.render(&self.pixel_buffer);
+        }
+
+        self.render_flag = false;
     }
 
     fn set_mode(&mut self, bus: &mut Bus, mode: Mode) {
@@ -199,7 +199,6 @@ impl PPU {
         if self.registers.STAT & INTERRUPT_SOURCE_FLAGS[mode as usize] != 0 {
             interrupt(bus, InterruptType::LCDStat);
         }
-
     }
 
     pub fn reset(&mut self, bus: &mut Bus) {
@@ -289,7 +288,13 @@ impl BusListener for PPU {
 
         let ptr = match address {
             0x8000..=0x9FFF => &mut self.VRAM[(address - 0x8000) as usize],
-            0xFE00..=0xFE9F => &mut self.OAM[(address - 0xFE00) as usize],
+
+            0xFE00..=0xFE9F => {
+                if self.mode == Mode::OAM || self.mode == Mode::Draw {
+                    panic!("Illegal write to OAM table.");
+                }
+                &mut self.OAM[(address - 0xFE00) as usize]
+            },
 
             0xFF40 => &mut self.registers.LCDC,
             // 0xFF41 HANDLED ABOVE //
@@ -341,7 +346,7 @@ impl ClockListener for PPU {
 
         // DMA Transfer Loop
         for _ in 0..cycles {
-            // DMA may terminate in the middle of this loop
+            // DMA may terminate in the middle of this loop.
             if !self.registers.dma_active {
                 break;
             }
@@ -359,8 +364,11 @@ impl ClockListener for PPU {
         use Mode::*;
         match self.mode {
             OAM => {
-                if self.clock < OAM_CYCLES {
+                for _ in 0..(cycles << 1) {
                     self.spfifo.scan_next_oam_table_entry(&self.OAM, &self.registers);
+                }
+
+                if self.clock < OAM_CYCLES {
                     return;
                 }
 
@@ -368,7 +376,7 @@ impl ClockListener for PPU {
                 self.set_mode(bus, Draw);
             }
             Draw => {
-                // Render cycle: Push pixels onto the screen
+                // Render cycle: Push pixels onto the screen.
                 for _ in 0..(cycles << 1) {
                     self.bgfifo.step(&self.VRAM, self.registers);
                     self.spfifo.step(&self.VRAM, self.registers);
@@ -387,14 +395,20 @@ impl ClockListener for PPU {
                             Some(index) => pixel_index = index,
                         }
 
+                        let alt_palette_buffer: [u32; 4] = [0xFFFFFF, 0xCC0000, 0x440000, 0xFF0000];
+                        let mut pixel = self.palette_buffer[pixel_index as usize];
+
                         // TODO: Sprite priority.
                         match self.spfifo.pop(self.registers.LX) {
                             None => {},
-                            Some(index) => pixel_index = index,
+                            Some(index) => {
+                                pixel_index = index;
+                                pixel = alt_palette_buffer[pixel_index as usize];
+                            },
                         }
 
-                        let pixel = self.palette_buffer[pixel_index as usize];
-                        let buffer_index = (self.registers.LY as u16 * DISPLAY_WIDTH as u16) + self.registers.LX as u16;
+                        let buffer_index = (self.registers.LY as u16 * DISPLAY_WIDTH as u16)
+                            + self.registers.LX as u16;
 
                         self.pixel_buffer[buffer_index as usize] = pixel;
                         self.registers.LX += 1;
@@ -428,7 +442,7 @@ impl ClockListener for PPU {
                     self.registers.STAT &= 0xFF ^ STAT_LYC_FLAG;
                 }
 
-                self.bgfifo.reset();
+                self.bgfifo.reset(0);
                 self.spfifo.reset();
                 self.registers.LX = 0;
                 self.registers.LY += 1;

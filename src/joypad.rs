@@ -73,8 +73,7 @@ impl BusListener for Joypad {
                     output |= self.buttons >> DPAD_SHIFT;
                 }
 
-                //(self.joypad_register & 0xF0) | (!output & 0x0F)
-                0xFF // TODO
+                (self.joypad_register & 0xF0) | (!output & 0x0F)
             },
             _ => panic!("Not a joypad address {address:04X}")
         }

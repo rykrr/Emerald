@@ -68,4 +68,8 @@ impl PixelFifo {
         self.pixels[(self.pos + self.size) % 16] = pixel;
         self.size += 1;
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
+    }
 }

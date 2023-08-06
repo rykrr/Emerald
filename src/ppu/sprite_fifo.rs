@@ -81,28 +81,29 @@ impl SpriteFifo {
             attributes: oam[index + 3],
         };
 
-        // Sprite is not visible y.
-        if oam_entry.y == 0 || oam_entry.x >= 160 {
+        // Sprite is outside the screen (y).
+        if oam_entry.y == 0 || oam_entry.y >= 160 {
             return;
         }
 
-        // Sprite is not visible x.
-        if oam_entry.x == 0 || oam_entry.y >= 168 {
+        // Sprite is outside the screen (x).
+        if oam_entry.x == 0 || oam_entry.x >= 168 {
             return;
         }
 
-        // Is entry on this line?
-        if registers.LY < oam_entry.y - 16 {
+        let ly = registers.LY + 16;
+
+        // Sprite is below current line (y).
+        if ly < oam_entry.y {
             return;
         }
 
         let sprite_height = if registers.LCDC & LCDC_SPRITE_SIZE != 0 { 16 } else { 8 };
 
-        if registers.LY >= (oam_entry.y - 16) + sprite_height {
+        // Sprite is above current line (y).
+        if ly >= oam_entry.y + sprite_height {
             return;
         }
-
-        println!("{:02X} {:02X} {:02X}", oam_entry.y, oam_entry.x, oam_entry.tile);
 
         // Sort entries by x value.
         let mut tmp_entry = oam_entry;
@@ -116,11 +117,18 @@ impl SpriteFifo {
         }
         self.oam_table[self.oam_table_size] = tmp_entry;
         self.oam_table_size += 1;
+
+        // println!("\nOAM TABLE Y {:3}", registers.LY + 16);
+        // for i in 0..self.oam_table_size {
+        //     println!("Entry {:3} X {:3} Y {:3} I {:3}", i, self.oam_table[i].x, self.oam_table[i].y, self.oam_table[i].tile);
+        // }
+        // println!("");
     }
 
     pub(crate) fn step(&mut self, vram: &[Byte], registers: Registers) {
 
         if registers.LCDC & LCDC_SPRITE_ENABLE == 0 {
+            // Sprites are disabled.
             return;
         }
 
@@ -128,6 +136,7 @@ impl SpriteFifo {
         match &self.state {
             FetchTileNo => {
                 if self.oam_table_size <= self.oam_entry_index {
+                    // There are no more entries to process.
                     return;
                 }
 
@@ -178,7 +187,7 @@ impl SpriteFifo {
                     let pixel = (self.tile_data.1.overflowing_shr(mask_bit).0 & 1) << 1
                         | (self.tile_data.0.overflowing_shr(mask_bit).0 & 1);
 
-                    self.entry_fifo.push(self.oam_table[self.oam_entry_index].x + mask_bit as u8);
+                    self.entry_fifo.push(self.oam_table[self.oam_entry_index].x as u8);
                     self.fifo.push(pixel);
                 }
 
@@ -191,10 +200,15 @@ impl SpriteFifo {
     }
 
     pub fn pop(&mut self, x: u8) -> Option<u8> {
-        let ex = *self.entry_fifo.top();
-        if x < ex {
+        if self.entry_fifo.is_empty() {
             return None;
         }
+
+        let ex = *self.entry_fifo.top();
+        if x + 8 < ex {
+            return None;
+        }
+
         self.entry_fifo.pop();
         self.fifo.pop()
     }

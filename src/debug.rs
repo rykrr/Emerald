@@ -7,6 +7,7 @@ use crate::{Address, Bus, CPU, PPU};
 
 pub struct Debugger {
     step: bool,
+    quit: bool,
     step_on_breakpoint: bool,
     breakpoints: HashSet<u16>,
 }
@@ -19,21 +20,34 @@ fn to_addr(s: Option<&str>) -> Result<Address, String> {
 }
 
 impl Debugger {
-    pub fn new() -> Self {
+    pub fn new(start_enabled: bool) -> Self {
         Self {
-            step: true,
+            step: start_enabled,
+            quit: false,
             step_on_breakpoint: false,
             breakpoints: HashSet::new(),
         }
     }
 
-    pub fn step(&mut self, bus: &mut Bus, cpu: &mut CPU, ppu: &PPU) {
-        if self.step || self.breakpoints.contains(&cpu.pc) {
-            self.step |= self.step_on_breakpoint;
-            println!("\n-- PAUSE ON {:04X} --\n\n{}", cpu.pc, cpu);
-            self.prompt(bus, cpu, ppu);
-            println!("\n-- -- -- --\n");
+    pub fn step(&mut self, bus: &mut Bus, cpu: &mut CPU, ppu: &PPU) -> bool {
+        if !(self.step || self.breakpoints.contains(&cpu.pc)) {
+            return false;
         }
+        self.step |= self.step_on_breakpoint;
+        println!("\n-- PAUSE ON {:04X} --\n\n{}", cpu.pc, cpu);
+        println!("self.step = {}", self.step);
+        println!("self.breakpoints = {:?}", self.breakpoints);
+        self.prompt(bus, cpu, ppu);
+        println!("\n-- -- -- --\n");
+        true
+    }
+
+    pub fn stop(&mut self) {
+        self.step = true;
+    }
+
+    pub fn has_quit(&mut self) -> bool {
+        self.quit
     }
 
     fn prompt(&mut self, bus: &mut Bus, cpu: &mut CPU, ppu: &PPU) {
@@ -52,6 +66,12 @@ impl Debugger {
 
             if let Some(command) = split.next() {
                 match command {
+                    "n" => break,
+                    "c" => {
+                        self.step = false;
+                        println!("Continuing...");
+                        break;
+                    },
                     "s" => {
                         self.step = true;
                         println!("Stepping enabled.");
@@ -99,12 +119,20 @@ impl Debugger {
                             Ok(address) => println!("{:02X}", bus.read_byte(address)),
                             Err(e) => println!("{e}")
                         }
-                    }
+                    },
                     "reset" => {
                         cpu.pc = 0x0100;
+                    },
+                    "help" => {
+                        println!("");
+                    },
+                    "quit" => {
+                        self.quit = true;
+                        break;
+                    },
+                    unknown_command => {
+                        println!("Unknown command {}.", unknown_command);
                     }
-                    "quit" => panic!("QUIT"),
-                    _ => {}
                 }
             }
             else {

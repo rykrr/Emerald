@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::{Address, Attach, Bus, BusListener, Byte};
+use crate::{Address, Attach, Bus, BusListener, Byte, Debugger};
 
 const SELECT_BUTTONS: u8 = 1 << 5;
 const SELECT_DPAD: u8 = 1 << 4;
@@ -39,7 +39,8 @@ pub enum Direction {
 #[derive(Copy, Clone)]
 pub enum JoypadButtons {
     Button(Button),
-    Direction(Direction)
+    Direction(Direction),
+    Pause
 }
 
 pub trait JoypadDriver {
@@ -95,13 +96,14 @@ impl Joypad {
         }
     }
 
-    pub fn update(&mut self, driver: &mut dyn JoypadDriver) {
+    pub fn update(&mut self, driver: &mut dyn JoypadDriver, debugger: &mut Debugger) {
         let mut buttons: u8 = 0;
         let mut directions: u8 = 0;
         driver.get_buttons().iter().for_each(|input | {
             match input {
                 JoypadButtons::Button(button) => buttons |= *button as u8,
                 JoypadButtons::Direction(direction) => directions |= *direction as u8,
+                JoypadButtons::Pause => debugger.stop(),
             }
         });
         self.buttons = (buttons << BUTTONS_SHIFT) | (directions << DPAD_SHIFT);

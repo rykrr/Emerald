@@ -9,6 +9,7 @@ pub struct MiniFbDriver {
     window: Window,
     height: u16,
     width: u16,
+    disable_pause: bool,
 }
 
 impl MiniFbDriver {
@@ -28,6 +29,7 @@ impl MiniFbDriver {
             window,
             height,
             width,
+            disable_pause: false
         }
     }
 }
@@ -43,6 +45,8 @@ impl GraphicsDriver for MiniFbDriver {
         self.window
             .update_with_buffer(buffer, self.width as usize, self.height as usize)
             .unwrap();
+
+        self.disable_pause = false;
     }
 
     fn is_closed(&self) -> bool {
@@ -62,6 +66,13 @@ impl JoypadDriver for MiniFbDriver {
                 Key::E => Some(JoypadButtons::Button(Button::B)),
                 Key::Key1 => Some(JoypadButtons::Button(Button::Start)),
                 Key::Key2 => Some(JoypadButtons::Button(Button::Select)),
+                Key::F2 => {
+                    if self.disable_pause {
+                        return None;
+                    }
+                    self.disable_pause = true;
+                    Some(JoypadButtons::Pause)
+                },
                 _ => None
             }
         }

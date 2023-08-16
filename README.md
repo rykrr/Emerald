@@ -6,11 +6,15 @@ Emerald is a GameBoy Emulator written in Rust.
 It features:  
 - An explicit bus!
 - A mostly functional CPU!
-- A somewhat functional PPU! (Sprites not included)
+- A somewhat functional PPU! (Sprites now included!)
 - A disturbing lack of sound!
 - Console serial output!
 - ROM only cartridges!
-- A TODO comment where Joypad support should be!
+
+Todo:
+- Fix sprite flickering.
+- Fix timings.
+- Optimize emulation (current implementation is much slower than C++ implementation)
   
   
 > Insanity is doing thing same thing, over and over again, but expecting different results.

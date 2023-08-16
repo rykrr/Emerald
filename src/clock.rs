@@ -1,22 +1,22 @@
-use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::cell::RefCell;
 use std::time::{Duration, Instant};
 
-use crate::bus::*;
+use spin_sleep::SpinSleeper;
 
 const CYCLE_DURATION: Duration = Duration::from_nanos(239); // 4194304 Hz ~ 238.663 ns / cycle
 
 pub trait ClockListener {
-    fn callback(&mut self, bus: &mut Bus, cycles: u8);
+    fn callback(&mut self, cycles: u8);
 }
 
 type ClockListenerCell = RefCell<dyn ClockListener>;
 
 pub struct Clock {
     callbacks: Vec<Weak<ClockListenerCell>>,
-    cycles: u16,
+    cycles: u8,
     start_instant: Instant,
-    // sleeper: SpinSleeper,
+    sleeper: SpinSleeper,
 }
 
 impl Clock {
@@ -25,7 +25,7 @@ impl Clock {
             callbacks: Vec::new(),
             cycles: 0,
             start_instant: Instant::now(),
-            // sleeper: SpinSleeper::default(),
+            sleeper: SpinSleeper::default(),
         }
     }
 
@@ -34,15 +34,11 @@ impl Clock {
     }
 
     #[inline(always)]
-    pub fn increment(&mut self, bus: &mut Bus, cycles: u8) {
-        //self.cycles += cycles as u64;
+    pub fn increment(&mut self, cycles: u8) {
+        self.cycles += cycles;
 
         for listener in &mut self.callbacks {
-            listener
-                .upgrade()
-                .unwrap()
-                .borrow_mut()
-                .callback(bus, cycles);
+            listener.upgrade().unwrap().borrow_mut().callback(cycles);
         }
     }
 
@@ -55,27 +51,25 @@ impl Clock {
     #[inline(always)]
     pub fn cycle_end(&mut self) {
         let elapsed: Duration = self.start_instant.elapsed();
-        println!("Elapsed: {}ns", elapsed.as_nanos());
+        println!("Elapsed: {}", elapsed.as_nanos());
 
         let expected: Duration = CYCLE_DURATION.saturating_mul(self.cycles as u32);
-        println!(
-            "{} cycles is approximately {} ns",
-            self.cycles,
-            expected.as_nanos()
-        );
+        println!("{} cycles is approximately {} ns", self.cycles, expected.as_nanos());
 
         let remainder: Duration = expected.saturating_sub(elapsed);
         println!("Remainder: {}", remainder.as_nanos());
 
         if remainder.is_zero() {
-            panic!("Cycle overdue by {:?}!", remainder);
+            panic!("Cycle overdue!");
         }
+
+        self.sleeper.sleep(remainder)
     }
 }
 
 use std::fmt;
 impl fmt::Debug for Clock {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Error")
     }
 }

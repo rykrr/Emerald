@@ -8,6 +8,9 @@
 *.obj
 obj/
 
+target/
+perf.data
+
 # Precompiled Headers
 *.gch
 *.pch

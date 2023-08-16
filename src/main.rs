@@ -1,13 +1,10 @@
-#![deny(elided_lifetimes_in_paths)]
-//#![feature(exclusive_range_pattern)]
-#![allow(non_snake_case)]
-#![allow(unused_variables)]
+#![feature(exclusive_range_pattern)]
 
 mod bus;
 use crate::bus::*;
 
-mod timer;
-use crate::timer::*;
+mod clock;
+use crate::clock::*;
 
 mod cpu;
 use crate::cpu::*;
@@ -15,145 +12,55 @@ use crate::cpu::*;
 mod ppu;
 use crate::ppu::*;
 
-mod graphics;
-
-mod cartridge;
-
-mod debug;
-mod serial;
-mod clock;
-
-mod joypad;
-mod ram;
-
-use crate::debug::Debugger;
-use crate::joypad::*;
-use crate::clock::Clock;
-use crate::graphics::*;
-use crate::minifb_driver::MiniFbDriver;
-use crate::cartridge::load;
-use crate::graphics_driver::GraphicsDriver;
-use crate::InterruptType::Joypad;
-use crate::ram::{DummyRAM, RAM, RegisterHoles};
-
-use std::borrow::BorrowMut;
-
-use std::env;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-fn rc<T>(t: T) -> Rc<RefCell<T>> {
-    Rc::new(RefCell::new(t))
+struct Cartridge {
+    data: Vec<u8>
 }
 
-
-struct Options {
-    enable_debugger: bool,
-    enable_trace: bool,
-    enable_serial: bool,
-    cartridge_path: String,
-}
-
-fn parse_args() -> Options {
-    let args: Vec<String> = env::args().collect();
-
-    let mut options = Options {
-        enable_debugger: false,
-        enable_trace: false,
-        enable_serial: false,
-        cartridge_path: args.last().expect("Expected a file path.").clone(),
-    };
-
-    for arg in &args {
-        match arg.as_str() {
-            "-d" | "--enable-debugger" => options.enable_debugger = true,
-            "-t" | "--enable-trace" => options.enable_trace = true,
-            "-s" | "--enable-serial" => options.enable_serial = true,
-            _ => {},
+impl Cartridge {
+    fn new() -> Self {
+        Self {
+            //data: vec![ 0x81, 0x4F, 0x91, 0x82, 0xA4, 0xB5, 0x76 ]
+            //data: vec![0xAF, 0x3C, 0x17, 0x17, 0x17, 0x17, 0x76]
+            data: vec![0x3E, 0x06, 0x3D, 0x20, 0xFE, 0x00, 0x76]
         }
     }
-
-    options
 }
 
+impl BusListener for Cartridge {
+    fn addresses(&self) -> Vec<(Address, Address)> {
+        vec![(0x00, 0x10)]
+    }
+
+    fn read(&self, address: Address) -> Byte {
+        self.data[address as usize]
+    }
+
+    fn write(&mut self, _bus: &mut Bus, address: Address, value: Byte) {
+        println!("Writing address: {:04X}", address);
+        self.data[address as usize] = value
+    }
+}
+
+use std::rc::Rc;
+use std::cell::RefCell;
 
 fn main() {
-    env_logger::init();
-
-    let options = parse_args();
-
-    let mut minifb_driver = MiniFbDriver::new(
-        DISPLAY_WIDTH as u16,
-        DISPLAY_HEIGHT as u16,
-        minifb::Scale::X4,
-    );
-
-    // The bus handles the "wiring" between all components.
     let mut bus = Bus::new();
     let mut clk = Clock::new();
-
     let mut cpu = CPU::new();
-    cpu.attach_to_bus(&mut bus);
-
-    // Graphics processor.
-    let ppu = rc(PPU::new());
+    let mut ppu = Rc::new(RefCell::new(PPU::new()));
     bus.attach(ppu.clone());
-    clk.attach(ppu.clone());
 
-    let timer = rc(Timer::new());
-    bus.attach(timer.clone());
-    clk.attach(timer.clone());
+    println!("{}", ppu.borrow());
+    bus.write_byte(0xFF41, 0xAA);
+    println!("{}", ppu.borrow());
 
-    let cartridge = load(options.cartridge_path.as_str());
-    bus.attach(cartridge.clone());
+    let mut dum = Rc::new(RefCell::new(Cartridge::new()));
+    bus.attach(dum.clone());
 
-    let joypad = rc(joypad::Joypad::new());
-    bus.attach(joypad.clone());
-
-    let audio = rc(DummyRAM::new(0x10, 0x3F, true));
-    bus.attach(audio.clone());
-
-    let serial = rc(serial::SerialInterface::new(!options.enable_serial));
-    bus.attach(serial.clone());
-
-    let ram = rc(RAM::new());
-    bus.attach(ram.clone());
-
-    let unused_registers = rc(RegisterHoles::new());
-    bus.attach(unused_registers.clone());
-
-    let hram = rc(DummyRAM::new(0xFF, 0xFF, false));
-    bus.attach(hram.clone());
-
-    let mut debugger = Debugger::new();
-
-    // MAIN LOOP //
-
-    if options.enable_trace {
-        cpu.print_trace(&bus);
+    println!("{}", cpu);
+    while !cpu.is_halted() {
+        cpu.step(&mut bus, &mut clk);
+        println!("{}", cpu);
     }
-
-    while !cpu.is_halted() && !minifb_driver.is_closed() {
-        if options.enable_debugger {
-            let ppu = &*ppu.as_ref().borrow();
-            debugger.step(&mut bus, &mut cpu, ppu);
-        }
-
-        let cycles = cpu.step(&mut bus);
-
-        if options.enable_trace {
-            cpu.print_trace(&bus);
-        }
-
-        clk.increment(&mut bus, cycles);
-
-        ppu.as_ref()
-           .borrow_mut()
-           .update(&mut minifb_driver);
-
-        joypad.as_ref()
-              .borrow_mut()
-              .update(&mut minifb_driver)
-    }
-    // END LOOP //
 }
